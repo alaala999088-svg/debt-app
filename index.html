@@ -1,213 +1,127 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<title>مدير الديون</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مدير الديون الذكي</title>
 <link rel="manifest" href="manifest.json">
-
 <style>
-
-body{
-font-family: Arial;
-background:#f2f4f8;
-margin:0;
-direction:rtl;
-}
-
-header{
-background:#0f172a;
-color:white;
-padding:15px;
-text-align:center;
-font-size:22px;
-}
-
-.container{
-padding:15px;
-}
-
-button{
-
-padding:12px;
-margin:5px;
-border:none;
-border-radius:10px;
-font-size:16px;
-cursor:pointer;
-
-}
-
-.add{
-background:#22c55e;
-color:white;
-}
-
-.voice{
-background:#3b82f6;
-color:white;
-}
-
-.camera{
-background:#f59e0b;
-color:white;
-}
-
-.card{
-
-background:white;
-padding:12px;
-margin:10px 0;
-border-radius:12px;
-
-}
-
-.total{
-font-size:18px;
-color:red;
-margin-top:10px;
-}
-
+body { font-family: Arial; background: #f0f4f8; margin:0; direction:rtl; }
+header{background:#0f172a; color:white; padding:15px; text-align:center; font-size:22px;}
+.container{padding:15px;}
+button{padding:12px; margin:5px; border:none; border-radius:10px; font-size:16px; cursor:pointer;}
+.add{background:#22c55e; color:white;}
+.voice{background:#3b82f6; color:white;}
+.camera{background:#f59e0b; color:white;}
+.card{background:white; padding:12px; margin:10px 0; border-radius:12px;}
+.total{font-size:18px; color:red; margin-top:10px;}
 </style>
-
 </head>
-
 <body>
 
-<header>
-مدير الديون الشخصي
-</header>
+<header>مدير الديون الذكي</header>
 
 <div class="container">
-
 <button class="add" onclick="addDebt()">➕ إضافة دين</button>
-
 <button class="voice" onclick="startVoice()">🎤 تسجيل صوتي</button>
-
-<input type="file" accept="image/*" capture="camera">
-
+<input type="file" accept="image/*" capture="camera" id="invoiceImage">
 <div id="list"></div>
-
 <div class="total" id="total"></div>
-
 </div>
 
 <script>
-
+// ===== بيانات الديون =====
 let debts = JSON.parse(localStorage.getItem("debts")) || []
 
-function save(){
+function save(){ localStorage.setItem("debts",JSON.stringify(debts)) }
 
-localStorage.setItem("debts",JSON.stringify(debts))
-
-}
-
+// ===== إضافة دين جديد =====
 function addDebt(){
-
-let person = prompt("اسم الشخص او الدكان")
-
-let item = prompt("اسم الشيء")
-
-let price = prompt("السعر بالدينار")
-
-let obj = {
-
-person,
-item,
-price:parseInt(price),
-date:new Date().toLocaleDateString()
-
+  let person = prompt("اسم الشخص او الدكان")
+  let item = prompt("اسم المنتج")
+  let price = prompt("السعر بالدينار")
+  let img = document.getElementById("invoiceImage").files[0]
+  let obj = {
+    person,
+    item,
+    price:parseInt(price),
+    date:new Date().toLocaleDateString(),
+    image: img ? URL.createObjectURL(img) : null
+  }
+  debts.push(obj)
+  save()
+  render()
+  notify("تم تسجيل دين",person+" "+price+" دينار")
 }
 
-debts.push(obj)
-
-save()
-
-render()
-
-notify("تم تسجيل دين",person+" "+price+" دينار")
-
-}
-
+// ===== عرض جميع الديون =====
 function render(){
+  let list=document.getElementById("list")
+  list.innerHTML=""
+  let total=0
+  let grouped = {}
+  debts.forEach(d=>{
+    total+=d.price
+    if(!grouped[d.person]) grouped[d.person]=[]
+    grouped[d.person].push(d)
+  })
+  for(let person in grouped){
+    list.innerHTML+=`<div class="card"><b>${person}</b><br>
+    <button onclick="showPerson('${person}')">عرض مشترياته</button></div>`
+  }
+  document.getElementById("total").innerText="إجمالي الديون: "+total+" دينار"
+}
 
-let list=document.getElementById("list")
+// ===== عرض مشتريات شخص محدد =====
+function showPerson(person){
+  let personDebts = debts.filter(d=>d.person===person)
+  let msg=""
+  personDebts.forEach(d=>{
+    msg+=`${d.item} - ${d.price} دينار - ${d.date}\n`
+    if(d.image) msg+="[📷 صورة مرفقة]\n"
+  })
+  alert("مشتريات "+person+":\n\n"+msg)
+}
 
-list.innerHTML=""
+// ===== إشعارات =====
+function notify(title,msg){
+  if(Notification.permission==="granted"){
+    new Notification(title,{body:msg})
+  }
+}
+if("Notification" in window){ Notification.requestPermission() }
 
-let total=0
+// ===== تسجيل صوتي بالعربية =====
+const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition
+const recognition=new SpeechRecognition()
+recognition.lang="ar-SA"
+recognition.continuous=false
+function startVoice(){ recognition.start() }
+recognition.onresult=function(e){
+  let text=e.results[0][0].transcript
+  alert("تم التعرف على الصوت: "+text)
+  // مثال: تحويل الكلام العربي إلى عملية تلقائية
+  processVoice(text)
+}
 
-debts.forEach(d=>{
-
-total+=d.price
-
-list.innerHTML+=`
-
-<div class="card">
-
-<b>${d.person}</b><br>
-
-${d.item} - ${d.price} دينار<br>
-
-${d.date}
-
-</div>
-
-`
-
-})
-
-document.getElementById("total").innerText=
-
-"إجمالي الديون: "+total+" دينار"
-
+// ===== تحويل الكلام العربي إلى دين =====
+function processVoice(text){
+  // مثال مبسط: "اشتريت سكر من ابو علي 3000"
+  let regex=/اشتريت\s(.+)\sمن\s(.+)\s(\d+)/i
+  let match=text.match(regex)
+  if(match){
+    let item=match[1]
+    let person=match[2]
+    let price=parseInt(match[3])
+    let obj={person,item,price,date:new Date().toLocaleDateString(),image:null}
+    debts.push(obj)
+    save()
+    render()
+    notify("تم تسجيل دين صوتي",person+" "+price+" دينار")
+  }
 }
 
 render()
-
-function notify(title,msg){
-
-if(Notification.permission==="granted"){
-
-new Notification(title,{body:msg})
-
-}
-
-}
-
-if("Notification" in window){
-
-Notification.requestPermission()
-
-}
-
-const SpeechRecognition=
-
-window.SpeechRecognition||
-
-window.webkitSpeechRecognition
-
-const recognition=new SpeechRecognition()
-
-recognition.lang="ar-SA"
-
-function startVoice(){
-
-recognition.start()
-
-}
-
-recognition.onresult=function(e){
-
-let text=e.results[0][0].transcript
-
-alert("سمعت: "+text)
-
-}
-
 </script>
 
 </body>
