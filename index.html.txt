@@ -1,0 +1,339 @@
+ <!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<title>دفتر الديون</title>
+
+<link rel="manifest" href="manifest.json">
+
+<script>
+if('serviceWorker' in navigator){
+navigator.serviceWorker.register('sw.js');
+}
+</script>
+
+<style>
+
+body{
+font-family:Tahoma;
+background:#f2f3f8;
+margin:0;
+}
+
+header{
+background:#4a4aff;
+color:white;
+padding:15px;
+text-align:center;
+font-size:20px;
+}
+
+.container{
+padding:15px;
+}
+
+.card{
+background:white;
+padding:15px;
+border-radius:10px;
+margin-bottom:10px;
+box-shadow:0 2px 6px rgba(0,0,0,.1);
+}
+
+button{
+background:#4a4aff;
+color:white;
+border:none;
+padding:10px;
+border-radius:8px;
+margin:5px;
+}
+
+input,select{
+width:95%;
+padding:8px;
+margin:5px;
+border-radius:6px;
+border:1px solid #ccc;
+}
+
+.person{
+padding:10px;
+border-bottom:1px solid #eee;
+cursor:pointer;
+}
+
+.invoice{
+background:#fafafa;
+padding:10px;
+border-radius:8px;
+margin-top:8px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>دفتر الديون</header>
+
+<div class="container">
+
+<div class="card">
+
+إجمالي الديون:
+<span id="debt">0</span> د.ع
+
+<br>
+
+المدفوع:
+<span id="paid">0</span> د.ع
+
+<br>
+
+المتبقي:
+<span id="remain">0</span> د.ع
+
+</div>
+
+<div class="card">
+
+<h3>إضافة عملية</h3>
+
+<input id="person" placeholder="اسم الشخص او الدكان">
+
+<input id="item" placeholder="اسم الشيء">
+
+<input id="price" type="number" placeholder="السعر بالدينار">
+
+<select id="type">
+<option value="دين">دين</option>
+<option value="تسديد">تسديد</option>
+</select>
+
+<input id="date" type="date">
+
+<input id="note" placeholder="ملاحظات">
+
+<input type="file" accept="image/*" id="photo">
+
+<button onclick="add()">إضافة</button>
+
+<button onclick="voice()">🎤 تسجيل صوتي</button>
+
+</div>
+
+<div class="card">
+
+<h3>الأشخاص</h3>
+
+<div id="persons"></div>
+
+</div>
+
+</div>
+
+<script>
+
+let db=JSON.parse(localStorage.getItem("debts")||"[]");
+
+function save(){
+localStorage.setItem("debts",JSON.stringify(db));
+}
+
+function add(){
+
+let p=person.value;
+let i=item.value;
+let pr=parseInt(price.value);
+let t=type.value;
+let d=date.value;
+let n=note.value;
+
+let photoFile=document.getElementById("photo").files[0];
+
+let reader=new FileReader();
+
+reader.onload=function(){
+
+db.push({
+person:p,
+item:i,
+price:pr,
+type:t,
+date:d,
+note:n,
+photo:this.result
+});
+
+save();
+render();
+
+scheduleNotification(p,pr,d);
+
+};
+
+if(photoFile){
+reader.readAsDataURL(photoFile);
+}else{
+
+db.push({person:p,item:i,price:pr,type:t,date:d,note:n});
+
+save();
+render();
+
+scheduleNotification(p,pr,d);
+
+}
+
+}
+
+function render(){
+
+let persons={};
+
+let debt=0;
+let paid=0;
+
+db.forEach(e=>{
+
+if(!persons[e.person]) persons[e.person]=[];
+
+persons[e.person].push(e);
+
+if(e.type=="دين") debt+=e.price;
+
+if(e.type=="تسديد") paid+=e.price;
+
+});
+
+document.getElementById("debt").innerText=debt;
+
+document.getElementById("paid").innerText=paid;
+
+document.getElementById("remain").innerText=debt-paid;
+
+let html="";
+
+for(let p in persons){
+
+let total=persons[p]
+.filter(x=>x.type=="دين")
+.reduce((a,b)=>a+b.price,0);
+
+html+=`
+<div class="person" onclick="openPerson('${p}')">
+${p} — ${total} د.ع
+</div>
+`;
+
+}
+
+document.getElementById("persons").innerHTML=html;
+
+}
+
+function openPerson(name){
+
+let list=db.filter(x=>x.person==name);
+
+let html="<h2>"+name+"</h2>";
+
+list.forEach(e=>{
+
+html+=`
+<div class="invoice">
+
+${e.item} — ${e.price} د.ع
+<br>
+${e.date}
+<br>
+${e.note||""}
+
+${e.photo?'<br><img src="'+e.photo+'" width="120">':""}
+
+</div>
+`;
+
+});
+
+html+=`
+<br>
+<button onclick="share('${name}')">
+مشاركة الفاتورة
+</button>
+`;
+
+document.body.innerHTML=html;
+
+}
+
+function share(name){
+
+let text="فاتورة الديون مع "+name+"\n\n";
+
+db.filter(x=>x.person==name).forEach(e=>{
+
+text+=e.item+" "+e.price+" د.ع\n";
+
+});
+
+navigator.share({
+title:"فاتورة دين",
+text:text
+});
+
+}
+
+function voice(){
+
+let rec=new webkitSpeechRecognition();
+
+rec.lang="ar-SA";
+
+rec.start();
+
+rec.onresult=function(e){
+
+item.value=e.results[0][0].transcript;
+
+}
+
+}
+
+function scheduleNotification(name,amount,date){
+
+if(!("Notification" in window)) return;
+
+Notification.requestPermission();
+
+let now=new Date().getTime();
+
+let due=new Date(date).getTime();
+
+let time=due-now;
+
+if(time>0){
+
+setTimeout(()=>{
+
+new Notification("تذكير دين",{
+body:"يجب دفع "+amount+" د.ع إلى "+name
+});
+
+},time);
+
+}
+
+}
+
+render();
+
+</script>
+
+</body>
+</html>
