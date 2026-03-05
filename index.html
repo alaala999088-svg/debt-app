@@ -6,24 +6,27 @@
 <title>مدير الديون الاحترافي</title>
 <link rel="manifest" href="manifest.json">
 <style>
-body {
+/* ===== التصميم العام ===== */
+body{
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: #f5f7fa;
-  margin: 0;
+  margin:0;
+  background:#f2f4f8;
   direction: rtl;
 }
 header{
-  background: linear-gradient(90deg, #1e3a8a, #3b82f6);
+  background: linear-gradient(90deg, #4f46e5, #6366f1);
   color:white;
-  padding:20px;
   text-align:center;
-  font-size:24px;
+  padding:15px 0;
+  font-size:22px;
   font-weight:bold;
-  box-shadow: 0px 3px 6px rgba(0,0,0,0.2);
+  box-shadow:0px 2px 5px rgba(0,0,0,0.2);
 }
 .container{
-  padding:20px;
+  padding:10px 15px;
 }
+
+/* ===== أزرار رئيسية ===== */
 button{
   padding:12px 18px;
   margin:5px;
@@ -31,19 +34,22 @@ button{
   border-radius:10px;
   font-size:16px;
   cursor:pointer;
-  transition: 0.3s;
+  transition:0.3s;
 }
-button:hover{
-  transform: scale(1.05);
-}
-.add{background:#22c55e; color:white;}
-.voice{background:#3b82f6; color:white;}
-.camera{background:#f59e0b; color:white;}
-.share{background:#10b981; color:white;}
+button:hover{transform:scale(1.05);}
+.add{background:#22c55e;color:white;}
+.voice{background:#3b82f6;color:white;}
+.camera{background:#f59e0b;color:white;}
+.share{background:#10b981;color:white;}
+
+/* ===== الجداول ===== */
 table{
   width:100%;
   border-collapse: collapse;
-  margin-top:15px;
+  margin-top:10px;
+  box-shadow:0px 2px 6px rgba(0,0,0,0.1);
+  border-radius:10px;
+  overflow:hidden;
 }
 th, td{
   border:1px solid #ddd;
@@ -51,19 +57,19 @@ th, td{
   text-align:center;
 }
 th{
-  background: linear-gradient(90deg, #6366f1, #a5b4fc);
+  background: linear-gradient(90deg, #4f46e5, #a5b4fc);
   color:white;
 }
-tr:nth-child(even){background:#e2e8f0;}
+tr:nth-child(even){background:#e5e7eb;}
 tr:hover{background:#c7d2fe;}
 .total{
   font-size:18px;
   color:#dc2626;
-  margin-top:15px;
+  margin-top:5px;
   font-weight:bold;
 }
 img.invoice-img{
-  width:50px;
+  width:40px;
   cursor:pointer;
   border-radius:5px;
   transition:0.3s;
@@ -71,11 +77,27 @@ img.invoice-img{
 img.invoice-img:hover{
   transform: scale(2);
 }
+
+/* ===== بطاقات الأشخاص ===== */
+.card{
+  background:white;
+  border-radius:10px;
+  padding:10px;
+  margin:5px 0;
+  box-shadow:0px 2px 5px rgba(0,0,0,0.15);
+}
+.card h4{
+  margin:0 0 5px 0;
+}
+.card p{
+  margin:2px 0;
+}
 </style>
 </head>
 
 <body>
 <header>مدير الديون الاحترافي</header>
+
 <div class="container">
 <button class="add" onclick="addDebt()">➕ إضافة دين</button>
 <button class="voice" onclick="startVoice()">🎤 تسجيل صوتي</button>
@@ -90,7 +112,7 @@ let debts = JSON.parse(localStorage.getItem("debts")) || []
 
 function save(){ localStorage.setItem("debts",JSON.stringify(debts)) }
 
-// ===== إضافة دين جديد =====
+// ===== إضافة دين =====
 function addDebt(){
   let person = prompt("اسم الشخص أو الدكان")
   let item = prompt("اسم المنتج")
@@ -105,7 +127,7 @@ function addDebt(){
   notify("تم تسجيل دين","تم إضافة "+item+" من "+person+" بقيمة "+price+" دينار")
 }
 
-// ===== عرض كل الديون في جدول مع الصور وزر المشاركة =====
+// ===== عرض الديون =====
 function render(){
   let tablesDiv=document.getElementById("tables")
   tablesDiv.innerHTML=""
@@ -134,7 +156,7 @@ function render(){
         <thead>
           <tr>
             <th>المنتج</th>
-            <th>السعر (دينار)</th>
+            <th>السعر</th>
             <th>التاريخ</th>
             <th>فاتورة</th>
             <th>مشاركة</th>
@@ -145,13 +167,12 @@ function render(){
       <div class="total">إجمالي دين ${person}: ${grouped[person].reduce((a,b)=>a+b.price,0)} دينار</div>
     `
   }
-
   document.getElementById("total").innerText="إجمالي كل الديون: "+total+" دينار"
 }
 
 render()
 
-// ===== إشعارات مخصصة مع صوت =====
+// ===== إشعارات صوتية =====
 function notify(title,msg){
   if(Notification.permission==="granted"){
     let notification = new Notification(title,{body:msg, icon:"https://cdn-icons-png.flaticon.com/512/2942/2942182.png"})
@@ -161,7 +182,7 @@ function notify(title,msg){
 }
 if("Notification" in window){ Notification.requestPermission() }
 
-// ===== تسجيل صوتي بالعربية =====
+// ===== تسجيل صوتي =====
 const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition
 const recognition=new SpeechRecognition()
 recognition.lang="ar-SA"
@@ -174,7 +195,7 @@ recognition.onresult=function(e){
   processVoice(text)
 }
 
-// ===== تحويل الكلام العربي إلى دين =====
+// ===== معالجة النص الصوتي =====
 function processVoice(text){
   let regex=/اشتريت\s(.+)\sمن\s(.+)\s(\d+)/i
   let match=text.match(regex)
@@ -190,20 +211,19 @@ function processVoice(text){
   }
 }
 
-// ===== عرض الصورة بالحجم الكامل =====
+// ===== فتح الصورة بالحجم الكامل =====
 function viewImage(url){
   let imgWin = window.open(url)
   imgWin.focus()
 }
 
-// ===== مشاركة الفاتورة على واتساب =====
+// ===== مشاركة على واتساب =====
 function shareInvoice(person,index){
   let d = debts.filter(debt=>debt.person===person)[index]
   let text = `فاتورة: ${d.item} من ${d.person} بتاريخ ${d.date} - السعر: ${d.price} دينار`
   let url = `https://wa.me/?text=${encodeURIComponent(text)}`
   window.open(url)
 }
-
 </script>
 </body>
 </html>
